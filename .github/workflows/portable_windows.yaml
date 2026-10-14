@@ -1,0 +1,56 @@
+name: windows-portable-zip
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'win-portable'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows-zip:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: win-portable
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: simple_live_app/pubspec.yaml
+          channel: stable
+          cache: true
+      - name: Enable Flutter Desktop
+        run: flutter config --enable-windows-desktop
+      - name: Restore Packages
+        run: |
+          cd simple_live_app
+          flutter clean
+          flutter pub get
+      - name: Install fast-forge
+        run: |
+          git clone https://github.com/SlotSun/fastforge.git
+          cd fastforge
+          dart pub global activate melos
+          melos run activate
+      # 只打 zip 便携包（绿色版），跳过 msix/exe 安装包以加速构建
+      - name: Build Windows zip
+        run: |
+          cd simple_live_app
+          fastforge package --platform windows --targets zip --skip-clean
+          cd build/dist/*
+          Get-ChildItem "simple_live_app-*" | ForEach-Object {
+            $newName = $_.Name -replace '^simple_live_app', 'Slive'
+            Rename-Item $_ -NewName $newName
+          }
+        shell: pwsh
+      - name: Upload Windows zip to Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-portable-zip
+          path: |
+            simple_live_app/build/dist/*/*.zip
+      - run: echo "🍏 Windows portable zip build status is ${{ job.status }}."

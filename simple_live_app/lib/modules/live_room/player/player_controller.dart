@@ -14,6 +14,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/event_bus.dart';
+import 'package:simple_live_app/services/shader_service.dart';
 import 'package:simple_live_app/services/window_service.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'package:screen_brightness_platform_interface/screen_brightness_platform_interface.dart';
@@ -87,10 +88,51 @@ mixin PlayerMixin {
     //  icc-cache-dir = "~~/cache/icc";
     //  gpu-shader-cache-dir = "~~/cache/shader"
     //  watch-later-dir = "~~/cache/watch_later"
-    // NVIDIA RTX VSR 支持 (Windows 平台)
-    if (Platform.isWindows && AppSettingsController.instance.enableRtxVsr.value) {
-      await pp.setProperty('hwdec', 'd3d11va');
-      await pp.setProperty('vf', 'd3d11vpp=scale=2:scaling-mode=nvidia');
+    // 超分辨率 (Windows 平台)
+    // 1=NVIDIA RTX VSR(驱动级) / 2=AMD FSR / 3=ArtCNN (mpv 用户着色器)
+    if (Platform.isWindows) {
+      var mode = AppSettingsController.instance.superResolutionMode.value;
+      if (mode == 1) {
+        try {
+          await pp.setProperty('hwdec', 'd3d11va');
+          await pp.setProperty('vf', 'd3d11vpp=scale=2:scaling-mode=nvidia');
+        } catch (e, s) {
+          Log.e("RTX VSR 设置失败: $e", s);
+        }
+      } else {
+        // 清除可能残留的 d3d11vpp 滤镜（同一播放器实例重复初始化时）
+        try {
+          await pp.setProperty('vf', '');
+        } catch (_) {}
+        if (mode == 2 || mode == 3) {
+          try {
+            var shaderPath = mode == 2
+                ? await ShaderService.fsrShaderPath()
+                : await ShaderService.artcnnShaderPath();
+            await pp.command(
+              ['change-list', 'glsl-shaders', 'set', shaderPath],
+            );
+          } catch (e, s) {
+            Log.e("超分着色器加载失败: $e", s);
+          }
+        } else {
+          try {
+            await pp.command(['change-list', 'glsl-shaders', 'clr', '']);
+          } catch (_) {}
+        }
+      }
+    }
+    // 画面插帧 (Windows 平台)
+    // mpv 维护者推荐组合: video-sync=display-resample + interpolation + oversample
+    if (Platform.isWindows &&
+        AppSettingsController.instance.videoInterpolation.value) {
+      try {
+        await pp.setProperty('video-sync', 'display-resample');
+        await pp.setProperty('interpolation', 'yes');
+        await pp.setProperty('tscale', 'oversample');
+      } catch (e, s) {
+        Log.e("插帧设置失败: $e", s);
+      }
     }
   }
 

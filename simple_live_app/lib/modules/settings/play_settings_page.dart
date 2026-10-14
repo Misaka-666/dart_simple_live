@@ -42,6 +42,18 @@ class PlaySettingsPage extends GetView<AppSettingsController> {
                     },
                   ),
                 ),
+                if (Platform.isWindows) AppStyle.divider,
+                if (Platform.isWindows)
+                  Obx(
+                    () => SettingsSwitch(
+                      title: "画面插帧",
+                      value: controller.videoInterpolation.value,
+                      subtitle: "提升画面流畅度，会增加GPU负载；下次进入直播间生效",
+                      onChanged: (e) {
+                        controller.setVideoInterpolation(e);
+                      },
+                    ),
+                  ),
                 if (Platform.isAndroid) AppStyle.divider,
                 Obx(
                   () => Visibility(

@@ -166,8 +166,25 @@ class AppSettingsController extends GetxController {
       false,
     );
 
-    enableRtxVsr.value = LocalStorageService.instance.getValue(
-      LocalStorageService.kEnableRtxVsr,
+    // 超分辨率模式，旧版 EnableRtxVsr=true 自动迁移为 RTX VSR 档
+    var storedSuperResolutionMode = LocalStorageService.instance
+        .getNullValue<int>(LocalStorageService.kSuperResolutionMode, null);
+    if (storedSuperResolutionMode == null) {
+      var legacyRtxVsr = LocalStorageService.instance.getValue(
+        LocalStorageService.kEnableRtxVsr,
+        false,
+      );
+      superResolutionMode.value = legacyRtxVsr ? 1 : 0;
+      LocalStorageService.instance.setValue(
+        LocalStorageService.kSuperResolutionMode,
+        superResolutionMode.value,
+      );
+    } else {
+      superResolutionMode.value = storedSuperResolutionMode;
+    }
+
+    videoInterpolation.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kVideoInterpolation,
       false,
     );
 
@@ -674,11 +691,24 @@ class AppSettingsController extends GetxController {
     LocalStorageService.instance.setValue(LocalStorageService.kVideoDoubleBuffering, e);
   }
 
-  var enableRtxVsr = false.obs;
+  /// 超分辨率模式
+  /// * [0] 关闭
+  /// * [1] NVIDIA RTX VSR
+  /// * [2] AMD FSR
+  /// * [3] ArtCNN
+  var superResolutionMode = 0.obs;
 
-  void setEnableRtxVsr(bool e) {
-    enableRtxVsr.value = e;
-    LocalStorageService.instance.setValue(LocalStorageService.kEnableRtxVsr, e);
+  void setSuperResolutionMode(int e) {
+    superResolutionMode.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kSuperResolutionMode, e);
+  }
+
+  /// 画面插帧
+  var videoInterpolation = false.obs;
+
+  void setVideoInterpolation(bool e) {
+    videoInterpolation.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kVideoInterpolation, e);
   }
 
   var autoUpdateFollowEnable = false.obs;

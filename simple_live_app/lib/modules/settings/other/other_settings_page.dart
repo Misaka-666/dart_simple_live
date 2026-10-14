@@ -144,12 +144,18 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                 if (Platform.isWindows) AppStyle.divider,
                 if (Platform.isWindows)
                   Obx(
-                    () => SettingsSwitch(
-                      value: AppSettingsController.instance.enableRtxVsr.value,
-                      title: "NVIDIA RTX VSR",
-                      subtitle: "N卡视频超分增强",
+                    () => SettingsMenu<int>(
+                      title: "超分辨率",
+                      subtitle: "下次进入直播间生效；RTX VSR 仅N卡，FSR/ArtCNN 任意显卡可用",
+                      value: AppSettingsController.instance.superResolutionMode.value,
+                      valueMap: const {
+                        0: "关闭",
+                        1: "NVIDIA RTX VSR",
+                        2: "AMD FSR",
+                        3: "ArtCNN",
+                      },
                       onChanged: (e) async {
-                        if (e) {
+                        if (e == 1) {
                           final confirm = await Utils.showAlertDialog(
                             "开启前请注意以下事项与硬件要求：\n\n"
                             "1. 硬件限制：支持 NVIDIA GeForce RTX 20 / 30 / 40 系列及更新显卡，显卡驱动版本需在 545.84 以上。旧款 GTX 系列不受支持。\n\n"
@@ -160,10 +166,10 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                             confirm: "确认开启",
                           );
                           if (confirm) {
-                            AppSettingsController.instance.setEnableRtxVsr(true);
+                            AppSettingsController.instance.setSuperResolutionMode(1);
                           }
                         } else {
-                          AppSettingsController.instance.setEnableRtxVsr(false);
+                          AppSettingsController.instance.setSuperResolutionMode(e);
                         }
                       },
                     ),

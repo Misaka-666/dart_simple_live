@@ -176,4 +176,5 @@ flutter:
     - assets/icons/
     - assets/lotties/
     - assets/fonts/fonts-manifest.json
+    - assets/shaders/
     - shorebird.yaml

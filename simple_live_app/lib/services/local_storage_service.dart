@@ -198,7 +198,18 @@ class LocalStorageService extends GetxService {
   static const String kVideoDoubleBuffering = "VideoDoubleBuffering";
 
   /// NVIDIA RTX Video Super Resolution
+  /// (已废弃，仅用于迁移到 [kSuperResolutionMode])
   static const String kEnableRtxVsr = "EnableRtxVsr";
+
+  /// 超分辨率模式
+  /// * [0] 关闭
+  /// * [1] NVIDIA RTX VSR
+  /// * [2] AMD FSR
+  /// * [3] ArtCNN
+  static const String kSuperResolutionMode = "SuperResolutionMode";
+
+  /// 画面插帧 (mpv video-sync=display-resample + interpolation)
+  static const String kVideoInterpolation = "VideoInterpolation";
 
   /// 开启自动更新关注
   static const String kAutoUpdateFollowEnable = "AutoUpdateFollowEnable";
