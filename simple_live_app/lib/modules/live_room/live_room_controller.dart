@@ -546,14 +546,14 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     return qualityLevel;
   }
 
-  Future<void> getPlayUrl() async {
+  Future<bool> getPlayUrl() async {
     currentQualityInfo.value = qualites[currentQuality].quality;
     currentLineInfo.value = "";
     currentLineIndex = -1;
     var playUrl = await site.liveSite.getPlayUrls(detail: detail.value!, quality: qualites[currentQuality]);
     if (playUrl.urls.isEmpty) {
       SmartDialog.showToast("无法读取播放地址");
-      return;
+      return false;
     }
     playUrls.assignAll(playUrl.urls); // 深拷贝
     playHeaders = playUrl.headers;
@@ -562,6 +562,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     //重置错误次数
     mediaErrorRetryCount = 0;
     initPlaylist();
+    return true;
   }
 
   void changePlayLine(int index) {
@@ -587,6 +588,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     await initializePlayer();
 
     await player.open(Playlist(mediaList));
+    lastPlayStartAt = DateTime.now();
   }
 
   void setPlayer() async {
@@ -611,6 +613,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       return;
     }
 
+    // 旧地址重放无效（如斗鱼带签名的地址约5分钟过期），重新获取播放地址
+    if (await tryRefreshPlayUrl()) return;
+
     Log.d("播放结束");
     // 遍历线路，如果全部链接都断开就是直播结束了
     if (playUrls.length - 1 == currentLineIndex) {
@@ -623,6 +628,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }
 
   int mediaErrorRetryCount = 0;
+  int mediaRefreshCount = 0;
+  DateTime? lastPlayStartAt;
+  bool refreshingPlayUrl = false;
   @override
   void mediaError(String error) async {
     super.mediaEnd();
@@ -638,6 +646,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       return;
     }
 
+    // 旧地址重放无效，重新获取播放地址
+    if (await tryRefreshPlayUrl()) return;
+
     if (playUrls.length - 1 == currentLineIndex) {
       errorMsg.value = "播放失败";
       SmartDialog.showToast("播放失败:$error");
@@ -646,6 +657,40 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       //setPlayer();
       changePlayLine(currentLineIndex + 1);
     }
+  }
+
+  /// 断流后重新从站点接口获取播放地址
+  ///
+  /// 直播流地址多为带签名的临时地址（如斗鱼约5分钟过期），
+  /// 过期后重放旧地址必然失败，必须重新请求接口换取新地址；
+  /// 已在重连中或成功重开播放返回 true，无法刷新返回 false，由调用方走结束/换线路逻辑
+  Future<bool> tryRefreshPlayUrl() async {
+    // 断流会同时触发 mediaEnd/mediaError，避免并发重复刷新
+    if (refreshingPlayUrl) return true;
+    // 距上次开播超过1分钟，视为正常观看中的偶发断流，重置连续刷新次数
+    if (lastPlayStartAt != null && DateTime.now().difference(lastPlayStartAt!) > const Duration(minutes: 1)) {
+      mediaRefreshCount = 0;
+    }
+    if (mediaRefreshCount >= 3) {
+      return false;
+    }
+    refreshingPlayUrl = true;
+    mediaRefreshCount += 1;
+    Log.d("播放中断，尝试第$mediaRefreshCount次重新获取播放地址");
+    SmartDialog.showToast("信号中断，正在自动重连");
+    await Future.delayed(const Duration(seconds: 1));
+    try {
+      if (!await getPlayUrl()) {
+        refreshingPlayUrl = false;
+        return false;
+      }
+    } catch (e) {
+      Log.logPrint(e);
+      refreshingPlayUrl = false;
+      return false;
+    }
+    refreshingPlayUrl = false;
+    return true;
   }
 
   /// 读取SC
