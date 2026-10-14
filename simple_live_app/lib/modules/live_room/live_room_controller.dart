@@ -601,6 +601,10 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   @override
   void mediaEnd() async {
     super.mediaEnd();
+    // 断流多为播放地址过期（如斗鱼带签名的地址约5分钟失效），重放旧地址无效，
+    // 首次断流直接重新获取地址，避免先经历数次必败的重放中断
+    if (await tryRefreshPlayUrl()) return;
+
     if (mediaErrorRetryCount < 2) {
       Log.d("播放结束，尝试第${mediaErrorRetryCount + 1}次刷新");
       if (mediaErrorRetryCount == 1) {
@@ -612,9 +616,6 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       setPlayer();
       return;
     }
-
-    // 旧地址重放无效（如斗鱼带签名的地址约5分钟过期），重新获取播放地址
-    if (await tryRefreshPlayUrl()) return;
 
     Log.d("播放结束");
     // 遍历线路，如果全部链接都断开就是直播结束了
@@ -634,6 +635,9 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   @override
   void mediaError(String error) async {
     super.mediaEnd();
+    // 首次出错直接重新获取播放地址（地址过期时重放必然失败）
+    if (await tryRefreshPlayUrl()) return;
+
     if (mediaErrorRetryCount < 2) {
       Log.d("播放失败，尝试第${mediaErrorRetryCount + 1}次刷新");
       if (mediaErrorRetryCount == 1) {
@@ -645,9 +649,6 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
       setPlayer();
       return;
     }
-
-    // 旧地址重放无效，重新获取播放地址
-    if (await tryRefreshPlayUrl()) return;
 
     if (playUrls.length - 1 == currentLineIndex) {
       errorMsg.value = "播放失败";
