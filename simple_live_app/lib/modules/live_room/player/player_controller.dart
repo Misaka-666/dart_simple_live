@@ -89,41 +89,7 @@ mixin PlayerMixin {
     //  gpu-shader-cache-dir = "~~/cache/shader"
     //  watch-later-dir = "~~/cache/watch_later"
     // 超分辨率 (Windows 平台)
-    // 1=NVIDIA RTX VSR(驱动级) / 2=AMD FSR / 3=ArtCNN (mpv 用户着色器)
-    if (Platform.isWindows) {
-      var mode = AppSettingsController.instance.superResolutionMode.value;
-      if (mode == 1) {
-        try {
-          await pp.setProperty('hwdec', 'd3d11va');
-          await pp.setProperty('vf', 'd3d11vpp=scale=2:scaling-mode=nvidia');
-        } catch (e, s) {
-          Log.e("RTX VSR 设置失败: $e", s);
-        }
-      } else {
-        // 清除可能残留的 d3d11vpp 滤镜（同一播放器实例重复初始化时）
-        try {
-          await pp.setProperty('vf', '');
-        } catch (_) {}
-        if (mode == 2 || mode == 3) {
-          try {
-            var strength =
-                AppSettingsController.instance.superResolutionStrength.value;
-            var shaderPath = mode == 2
-                ? await ShaderService.fsrShaderPath(strength)
-                : await ShaderService.artcnnShaderPath(strength);
-            await pp.command(
-              ['change-list', 'glsl-shaders', 'set', shaderPath],
-            );
-          } catch (e, s) {
-            Log.e("超分着色器加载失败: $e", s);
-          }
-        } else {
-          try {
-            await pp.command(['change-list', 'glsl-shaders', 'clr', '']);
-          } catch (_) {}
-        }
-      }
-    }
+    await applySuperResolution();
     // 画面插帧 (Windows 平台)
     // mpv 维护者推荐组合: video-sync=display-resample + interpolation + oversample
     if (Platform.isWindows &&
@@ -135,6 +101,48 @@ mixin PlayerMixin {
       } catch (e, s) {
         Log.e("插帧设置失败: $e", s);
       }
+    }
+  }
+
+  /// 应用超分辨率设置 (Windows 平台)
+  ///
+  /// glsl-shaders / vf 均为 mpv 运行时属性，开播初始化与直播间内切换时
+  /// 都可直接调用，立即生效、无需重进直播间
+  /// 1=NVIDIA RTX VSR(驱动级) / 2=AMD FSR / 3=ArtCNN (mpv 用户着色器)
+  Future<void> applySuperResolution() async {
+    if (!Platform.isWindows) return;
+    var pp = player.platform as NativePlayer;
+    var mode = AppSettingsController.instance.superResolutionMode.value;
+    if (mode == 1) {
+      try {
+        await pp.setProperty('hwdec', 'd3d11va');
+        await pp.setProperty('vf', 'd3d11vpp=scale=2:scaling-mode=nvidia');
+      } catch (e, s) {
+        Log.e("RTX VSR 设置失败: $e", s);
+      }
+      return;
+    }
+    // 清除可能残留的 d3d11vpp 滤镜（同一播放器实例重复应用时）
+    try {
+      await pp.setProperty('vf', '');
+    } catch (_) {}
+    if (mode == 2 || mode == 3) {
+      try {
+        var strength =
+            AppSettingsController.instance.superResolutionStrength.value;
+        var shaderPath = mode == 2
+            ? await ShaderService.fsrShaderPath(strength)
+            : await ShaderService.artcnnShaderPath(strength);
+        await pp.command(
+          ['change-list', 'glsl-shaders', 'set', shaderPath],
+        );
+      } catch (e, s) {
+        Log.e("超分着色器加载失败: $e", s);
+      }
+    } else {
+      try {
+        await pp.command(['change-list', 'glsl-shaders', 'clr', '']);
+      } catch (_) {}
     }
   }
 

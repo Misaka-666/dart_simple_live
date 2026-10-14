@@ -850,11 +850,18 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
 
   void showPlayerSettingsSheet() {
     Utils.showBottomSheet(
-      title: "画面尺寸",
+      title: "设置",
       child: Obx(
         () => ListView(
           padding: AppStyle.edgeInsetsV12,
           children: [
+            Padding(
+              padding: AppStyle.edgeInsetsH16,
+              child: Text(
+                "画面尺寸",
+                style: Get.textTheme.titleMedium,
+              ),
+            ),
             RadioGroup(
               groupValue: AppSettingsController.instance.scaleMode.value,
               onChanged: (e) {
@@ -897,6 +904,103 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
                 ],
               ),
             ),
+            // 超分辨率：mpv glsl-shaders/vf 为运行时属性，切换立即生效
+            if (Platform.isWindows) ...[
+              AppStyle.divider,
+              Padding(
+                padding: AppStyle.edgeInsetsH16,
+                child: Text(
+                  "超分辨率",
+                  style: Get.textTheme.titleMedium,
+                ),
+              ),
+              RadioGroup(
+                groupValue:
+                    AppSettingsController.instance.superResolutionMode.value,
+                onChanged: (e) {
+                  AppSettingsController.instance.setSuperResolutionMode(e ?? 0);
+                  applySuperResolution();
+                },
+                child: Column(
+                  children: [
+                    RadioListTile(
+                      value: 0,
+                      title: const Text("关闭"),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    RadioListTile(
+                      value: 1,
+                      title: const Text("NVIDIA RTX VSR（N卡）"),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    RadioListTile(
+                      value: 2,
+                      title: const Text("AMD FSR"),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    RadioListTile(
+                      value: 3,
+                      title: const Text("ArtCNN"),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+              ),
+              if (AppSettingsController
+                          .instance.superResolutionMode.value ==
+                      2 ||
+                  AppSettingsController.instance.superResolutionMode.value ==
+                      3)
+                Padding(
+                  padding: AppStyle.edgeInsetsH16.copyWith(top: 8),
+                  child: Text(
+                    "超分强度（弱=柔和 / 标准 / 强=锐利）",
+                    style: Get.textTheme.titleMedium,
+                  ),
+                ),
+              if (AppSettingsController
+                          .instance.superResolutionMode.value ==
+                      2 ||
+                  AppSettingsController.instance.superResolutionMode.value ==
+                      3)
+                RadioGroup(
+                  groupValue: AppSettingsController
+                      .instance.superResolutionStrength.value,
+                  onChanged: (e) {
+                    AppSettingsController.instance
+                        .setSuperResolutionStrength(e ?? 1);
+                    applySuperResolution();
+                  },
+                  child: Column(
+                    children: [
+                      RadioListTile(
+                        value: 0,
+                        title: const Text("弱"),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      RadioListTile(
+                        value: 1,
+                        title: const Text("标准"),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      RadioListTile(
+                        value: 2,
+                        title: const Text("强"),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                ),
+              Padding(
+                padding: AppStyle.edgeInsetsH16.copyWith(top: 4, bottom: 8),
+                child: Text(
+                  "切换立即生效，无需重进直播间；RTX VSR 需 N卡并在驱动面板开启",
+                  style: Get.textTheme.bodySmall?.copyWith(
+                    color: Theme.of(Get.context!).hintColor,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

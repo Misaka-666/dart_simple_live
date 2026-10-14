@@ -146,7 +146,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                   Obx(
                     () => SettingsMenu<int>(
                       title: "超分辨率",
-                      subtitle: "下次进入直播间生效；RTX VSR 仅N卡，FSR/ArtCNN 任意显卡可用",
+                      subtitle: "直播间内设置面板可随时切换、立即生效；RTX VSR 仅N卡，FSR/ArtCNN 任意显卡可用",
                       value: AppSettingsController.instance.superResolutionMode.value,
                       valueMap: const {
                         0: "关闭",
@@ -188,7 +188,7 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                             AppStyle.divider,
                             SettingsMenu<int>(
                               title: "超分强度",
-                              subtitle: "弱=柔和画面，强=锐利画面；下次进入直播间生效",
+                              subtitle: "弱=柔和画面，强=锐利画面；直播间内可随时切换、立即生效",
                               value: AppSettingsController
                                   .instance.superResolutionStrength.value,
                               valueMap: const {
