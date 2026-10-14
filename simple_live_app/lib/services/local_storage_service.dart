@@ -208,6 +208,12 @@ class LocalStorageService extends GetxService {
   /// * [3] ArtCNN
   static const String kSuperResolutionMode = "SuperResolutionMode";
 
+  /// 超分辨率强度
+  /// * [0] 弱
+  /// * [1] 标准
+  /// * [2] 强
+  static const String kSuperResolutionStrength = "SuperResolutionStrength";
+
   /// 画面插帧 (mpv video-sync=display-resample + interpolation)
   static const String kVideoInterpolation = "VideoInterpolation";
 

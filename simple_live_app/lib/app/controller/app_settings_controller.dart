@@ -183,6 +183,11 @@ class AppSettingsController extends GetxController {
       superResolutionMode.value = storedSuperResolutionMode;
     }
 
+    superResolutionStrength.value = LocalStorageService.instance.getValue(
+      LocalStorageService.kSuperResolutionStrength,
+      1,
+    );
+
     videoInterpolation.value = LocalStorageService.instance.getValue(
       LocalStorageService.kVideoInterpolation,
       false,
@@ -701,6 +706,17 @@ class AppSettingsController extends GetxController {
   void setSuperResolutionMode(int e) {
     superResolutionMode.value = e;
     LocalStorageService.instance.setValue(LocalStorageService.kSuperResolutionMode, e);
+  }
+
+  /// 超分辨率强度
+  /// * [0] 弱
+  /// * [1] 标准
+  /// * [2] 强
+  var superResolutionStrength = 1.obs;
+
+  void setSuperResolutionStrength(int e) {
+    superResolutionStrength.value = e;
+    LocalStorageService.instance.setValue(LocalStorageService.kSuperResolutionStrength, e);
   }
 
   /// 画面插帧

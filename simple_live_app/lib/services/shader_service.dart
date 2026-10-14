@@ -13,7 +13,23 @@ class ShaderService {
   static const String kShaderDirName = 'shaders';
 
   /// 着色器版本，更新内置着色器后递增，触发本地重新释放
-  static const String kShaderVersion = '1';
+  static const String kShaderVersion = '2';
+
+  /// FSR RCAS 锐度（越小越锐利，0.0 为最大锐化），按超分强度 弱/标准/强
+  /// 生成变体时改写 FSR.glsl 内的 `#define SHARPNESS` 行
+  static const Map<int, String> kFsrSharpness = {
+    0: '0.35',
+    1: '0.2',
+    2: '0.0',
+  };
+
+  /// ArtCNN 变体文件（同架构同性能，仅权重不同）：
+  /// 弱=DN 降噪柔化 / 标准=基础 / 强=DS 降噪锐化
+  static const Map<int, String> kArtcnnVariant = {
+    0: 'ArtCNN_C4F32_DN.glsl',
+    1: 'ArtCNN_C4F32.glsl',
+    2: 'ArtCNN_C4F32_DS.glsl',
+  };
 
   static String? _shaderDir;
 
@@ -72,14 +88,32 @@ class ShaderService {
   }
 
   /// FSR 着色器绝对路径
-  static Future<String> fsrShaderPath() async {
+  ///
+  /// 按强度改写 RCAS 的 SHARPNESS 生成变体文件（文件名含锐度值，
+  /// 调整档位映射后自动重新生成，无需清理旧文件）
+  static Future<String> fsrShaderPath(int strength) async {
     var dir = await ensureExtracted();
-    return '$dir${Platform.pathSeparator}FSR.glsl';
+    var sharpness = kFsrSharpness[strength] ?? kFsrSharpness[1]!;
+    var target = File(
+      '$dir${Platform.pathSeparator}FSR_SH$sharpness.glsl',
+    );
+    if (!await target.exists()) {
+      var source = File('$dir${Platform.pathSeparator}FSR.glsl');
+      var content = await source.readAsString();
+      var replaced = content.replaceFirst(
+        RegExp(r'#define SHARPNESS\s+[0-9.]+'),
+        '#define SHARPNESS $sharpness',
+      );
+      await target.writeAsString(replaced, flush: true);
+      Log.d("已生成 FSR 强度变体 SHARPNESS=$sharpness: ${target.path}");
+    }
+    return target.path;
   }
 
-  /// ArtCNN 着色器绝对路径
-  static Future<String> artcnnShaderPath() async {
+  /// ArtCNN 着色器绝对路径（按强度选择变体）
+  static Future<String> artcnnShaderPath(int strength) async {
     var dir = await ensureExtracted();
-    return '$dir${Platform.pathSeparator}ArtCNN_C4F32.glsl';
+    var fileName = kArtcnnVariant[strength] ?? kArtcnnVariant[1]!;
+    return '$dir${Platform.pathSeparator}$fileName';
   }
 }

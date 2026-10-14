@@ -106,9 +106,11 @@ mixin PlayerMixin {
         } catch (_) {}
         if (mode == 2 || mode == 3) {
           try {
+            var strength =
+                AppSettingsController.instance.superResolutionStrength.value;
             var shaderPath = mode == 2
-                ? await ShaderService.fsrShaderPath()
-                : await ShaderService.artcnnShaderPath();
+                ? await ShaderService.fsrShaderPath(strength)
+                : await ShaderService.artcnnShaderPath(strength);
             await pp.command(
               ['change-list', 'glsl-shaders', 'set', shaderPath],
             );

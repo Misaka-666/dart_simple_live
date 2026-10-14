@@ -174,6 +174,38 @@ class OtherSettingsPage extends GetView<OtherSettingsController> {
                       },
                     ),
                   ),
+                // RTX VSR 为驱动级处理（等级在 NVIDIA 控制面板调节），无强度选项
+                if (Platform.isWindows)
+                  Obx(
+                    () {
+                      var srMode = AppSettingsController
+                          .instance.superResolutionMode.value;
+                      return Visibility(
+                        visible: srMode == 2 || srMode == 3,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AppStyle.divider,
+                            SettingsMenu<int>(
+                              title: "超分强度",
+                              subtitle: "弱=柔和画面，强=锐利画面；下次进入直播间生效",
+                              value: AppSettingsController
+                                  .instance.superResolutionStrength.value,
+                              valueMap: const {
+                                0: "弱",
+                                1: "标准",
+                                2: "强",
+                              },
+                              onChanged: (e) {
+                                AppSettingsController.instance
+                                    .setSuperResolutionStrength(e);
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
               ],
             ),
           ),
